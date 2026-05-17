@@ -13,7 +13,11 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: Unzip project
-        run: unzip FlashcardApp.zip -d project
+        run: |
+          unzip FlashcardApp.zip -d project
+          echo "=== Papka tuzilmasi ==="
+          find project -name "gradlew" 2>/dev/null
+          ls -la project/
 
       - uses: actions/setup-java@v4
         with:
@@ -21,20 +25,25 @@ jobs:
           distribution: 'temurin'
 
       - name: Make gradlew executable
-        run: chmod +x project/FlashcardApp/gradlew
+        run: |
+          GRADLEW=$(find project -name "gradlew" | head -1)
+          echo "gradlew topildi: $GRADLEW"
+          chmod +x "$GRADLEW"
+          echo "GRADLEW_PATH=$GRADLEW" >> $GITHUB_ENV
+          echo "PROJECT_DIR=$(dirname $GRADLEW)" >> $GITHUB_ENV
 
       - name: Create google-services.json
         run: |
-          cat > project/FlashcardApp/app/google-services.json << 'EOF'
+          cat > "$PROJECT_DIR/app/google-services.json" << 'EOF'
           {"project_info":{"project_number":"000000000000","project_id":"flashcard-demo","storage_bucket":"flashcard-demo.appspot.com"},"client":[{"client_info":{"mobilesdk_app_id":"1:000000000000:android:0000000000000000","android_client_info":{"package_name":"com.flashcard.app"}},"oauth_client":[],"api_key":[{"current_key":"AIzaSyDEMO"}],"services":{"appinvite_service":{"other_platform_oauth_client":[]}}}],"configuration_version":"1"}
           EOF
 
       - name: Build APK
         run: |
-          cd project/FlashcardApp
+          cd "$PROJECT_DIR"
           ./gradlew assembleDebug --no-daemon
 
       - uses: actions/upload-artifact@v4
         with:
           name: FlashcardApp-debug
-          path: project/FlashcardApp/app/build/outputs/apk/debug/app-debug.apk
+          path: "**/*.apk"
